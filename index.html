@@ -1,98 +1,1449 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的可话</title>
+    <link rel="icon" href="https://gips2.baidu.com/it/u=3788961055,2981673716&fm=3030&app=3030&size=re3,2&q=75&n=0&g=4n&f=JPEG&fmt=auto&maxorilen2heic=2000000?s=0D843C725525770158DC26E400007026" type="image/x-icon">
+    <!-- 引入JSZip库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3a86ff;
+            --primary-light: #9d4edd;
+            --secondary-color: #8d99ae;
+            --text-color: #2b2d42;
+            --text-light: #6c757d;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --border-color: #e0e0e0;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+            --accent-red: #ff5a5f;
+            --accent-green: #00a896;
+            --accent-yellow: #ffb703;
+        }
 
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-  -->
-  <base href="/">
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            padding-bottom: 2rem;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+        /* 固定头部区域 */
+        .sticky-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
 
-  <!-- iOS meta tags & icons -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="fwb">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+        /* 头部样式 */
+        .header {
+            text-align: center;
+            padding: 1.2rem 1rem 1rem;
+            background: white;
+            color: white;
+        }
 
-  <title>fwb</title>
-  <link rel="manifest" href="manifest.json">
+        .header h1 {
+            margin: 0 0 0.3rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #FF295B;
+            font-family: "Arial Rounded MT Bold", "Helvetica Rounded", Arial, sans-serif; /* 首选圆体 */
+        }
+
+        .header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        /* 使用说明卡片 */
+        .instructions {
+            max-width: 600px;
+            margin: 0 auto 1rem;
+            padding: 0 1rem;
+        }
+
+        .instruction-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.2rem;
+            margin-bottom: 0.8rem;
+            box-shadow: var(--shadow-md);
+        }
+
+        .instruction-card h3 {
+            color: var(--primary-color);
+            margin-bottom: 0.8rem;
+            font-size: 1.1rem;
+        }
+
+        .instruction-card ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .instruction-card li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+            font-size: 0.9rem;
+        }
+
+        .instruction-card li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--accent-green);
+            font-weight: bold;
+        }
+
+        /* 文件上传区域 - 可固定 */
+        .upload-container {
+            max-width: 600px;
+            margin: 0 auto 1rem;
+            padding: 0 1rem;
+        }
+
+        .upload-box {
+            border: 3px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 1.5rem 1rem;
+            text-align: center;
+            background: var(--card-bg);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-box.active {
+            border-color: var(--primary-color);
+            background: rgba(58, 134, 255, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.8rem;
+            color: var(--primary-color);
+        }
+
+        .upload-instruction {
+            color: var(--text-light);
+            margin: 0.8rem 0;
+            line-height: 1.5;
+            font-size: 0.9rem;
+        }
+
+        .upload-btn {
+            display: inline-block;
+            padding: 0.6rem 1.2rem;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 25px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .upload-btn:active {
+            transform: scale(0.98);
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 0.8rem;
+            font-size: 0.85rem;
+            color: var(--text-light);
+        }
+
+        .error-message {
+            color: var(--accent-red);
+            margin-top: 0.8rem;
+            padding: 0.8rem;
+            background: rgba(255, 90, 95, 0.1);
+            border-radius: 8px;
+            display: none;
+        }
+
+        /* 控制面板 - 固定区域 */
+        .control-panel {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0.5rem 1rem;
+            display: none;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            background: var(--card-bg);
+            /* border-bottom: 1px solid var(--border-color); */
+            /* box-shadow: 0 2px 5px rgba(0,0,0,0.05); */
+        }
+
+        .year-selector-container {
+            display: flex;
+            flex-direction: row;
+            gap: 0.4rem;
+            width: 100%;
+        }
+
+        .year-label {
+            font-weight: 600;
+            color: var(--text-light);
+            font-size: 0.85rem;
+        }
+
+        .year-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        .year-btn {
+            padding: 0.4rem 0.7rem;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 0.8rem;
+        }
+
+        .year-btn:active {
+            transform: scale(0.95);
+        }
+
+        .year-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .search-sort-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            width: 100%;
+        }
+
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .search-box {
+            padding: 0.5rem 0.8rem;
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            flex: 1;
+            font-size: 0.85rem;
+            transition: all 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .clear-search {
+            background: none;
+            border: none;
+            color: var(--secondary-color);
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0.4rem;
+        }
+
+        .sort-container {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .sort-btn {
+            padding: 0.5rem 0.8rem;
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .sort-btn:active {
+            transform: scale(0.95);
+        }
+
+        .sort-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .sort-icon {
+            font-size: 0.9rem;
+        }
+
+        /* 主内容区域 */
+        .main-content {
+            padding-top: calc(100vh - 60px); /* 初始留出空间 */
+        }
+
+        .timeline-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1rem;
+        }
+
+        /* 加载指示器 */
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-light);
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(58, 134, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 时间线 */
+        .timeline {
+            position: relative;
+            padding: 1rem 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, 
+                var(--primary-color) 0%, 
+                var(--border-color) 10%, 
+                var(--border-color) 90%, 
+                var(--primary-color) 100%);
+        }
+
+        /* 动态条目卡片 */
+        .diary-entry {
+            position: relative;
+            margin-bottom: 1.5rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+            transition: all 0.3s ease;
+            overflow: hidden;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .diary-entry:active {
+            transform: scale(0.99);
+        }
+
+        .diary-date {
+            position: static;
+            width: auto;
+            text-align: left;
+            margin-bottom: 0.5rem;
+            background: none;
+            box-shadow: none;
+            padding: 0;
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+
+        .diary-content {
+            padding: 1.2rem;
+            margin-left: 0;
+        }
+
+        .diary-time {
+            font-size: 0.75rem;
+            color: var(--secondary-color);
+            margin-bottom: 0.6rem;
+            font-weight: 500;
+        }
+
+        .diary-text {
+            white-space: pre-line;
+            margin-bottom: 1rem;
+            line-height: 1.7;
+            font-size: 0.95rem;
+        }
+
+        /* 多媒体内容 */
+        .media-container {
+            margin-top: 1rem;
+        }
+
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.3rem;
+        }
+
+        .media-item {
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            aspect-ratio: 1;
+            object-fit: cover;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .media-item:active {
+            transform: scale(0.95);
+        }
+
+        .media-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-bottom: 0.3rem;
+            font-weight: 500;
+        }
+
+        /* 灯箱 */
+        .lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease;
+        }
+
+        .lightbox.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .lightbox-content {
+            max-width: 95%;
+            max-height: 95%;
+            position: relative;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .lightbox img,
+        .lightbox video {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            background: rgba(0, 0, 0, 0.5);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s ease;
+        }
+
+        .lightbox-close:active {
+            background: rgba(0, 0, 0, 0.7);
+        }
+
+        /* 无内容提示 */
+        .no-entries {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-light);
+        }
+
+        .no-entries h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: var(--secondary-color);
+        }
+
+        /* 统计数据 */
+        .stats {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+            margin-bottom: 1rem;
+            padding: 1rem 1rem;
+        }
+
+        /* 返回顶部按钮 */
+        .back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 45px;
+            height: 45px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow-lg);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1500;
+            border: none;
+            font-size: 1.3rem;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:active {
+            transform: scale(0.9);
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem 0.8rem 0.8rem;
+            }
+            
+            .header h1 {
+                font-size: 1.3rem;
+            }
+            
+            .instruction-card {
+                padding: 1rem;
+            }
+            
+            .upload-box {
+                padding: 1.2rem 0.8rem;
+            }
+            
+            .upload-icon {
+                font-size: 2rem;
+            }
+            
+            .control-panel {
+                padding: 0.6rem 0.8rem;
+            }
+            
+            .diary-content {
+                padding: 1rem;
+            }
+            
+            .media-grid {
+                grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            }
+            
+            .back-to-top {
+                width: 40px;
+                height: 40px;
+                bottom: 15px;
+                right: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .year-buttons {
+                justify-content: center;
+            }
+            
+            .year-btn {
+                padding: 0.3rem 0.6rem;
+                font-size: 0.75rem;
+            }
+            
+            .media-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .search-sort-container {
+                gap: 0.6rem;
+            }
+        }
+
+        /* 初始状态占位容器 */
+        .initial-placeholder {
+            height: calc(100vh - 120px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-  <!-- This script installs service_worker.js to provide PWA functionality to
-       application. For more information, see:
-       https://developers.google.com/web/fundamentals/primers/service-workers -->
-  <script>
-    var serviceWorkerVersion = '3007838985';
-    var scriptLoaded = false;
-    function loadMainDartJs() {
-      if (scriptLoaded) {
-        return;
-      }
-      scriptLoaded = true;
-      var scriptTag = document.createElement('script');
-      scriptTag.src = 'main.dart.js';
-      scriptTag.type = 'application/javascript';
-      document.body.append(scriptTag);
-    }
+    <!-- 固定头部区域 -->
+    <div class="sticky-header" id="stickyHeader">
+        <header class="header">
+            <h1><em>我的可话~!</em></h1>
+        </header>
 
-    if ('serviceWorker' in navigator) {
-      // Service workers are supported. Use them.
-      window.addEventListener('load', function () {
-        // Wait for registration to finish before dropping the <script> tag.
-        // Otherwise, the browser will load the script multiple times,
-        // potentially different versions.
-        var serviceWorkerUrl = 'flutter_service_worker.js?v=' + serviceWorkerVersion;
-        navigator.serviceWorker.register(serviceWorkerUrl)
-          .then((reg) => {
-            function waitForActivation(serviceWorker) {
-              serviceWorker.addEventListener('statechange', () => {
-                if (serviceWorker.state == 'activated') {
-                  console.log('Installed new service worker.');
-                  loadMainDartJs();
+        <!-- 控制面板 - 上传后显示 -->
+        <div class="control-panel" id="controlPanel">
+            <div class="year-selector-container">
+                <div class="year-buttons" id="yearSelector">
+                    <!-- 年份按钮将通过JavaScript动态生成 -->
+                </div>
+                <div class="sort-container">
+                    <button class="sort-btn" id="sortDesc" title="从新到旧">
+                        <span class="sort-icon">⬇️</span>
+                    </button>
+                    <button class="sort-btn" id="sortAsc" title="从旧到新">
+                        <span class="sort-icon">⬆️</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="search-sort-container">
+                <div class="search-container">
+                    <input type="text" class="search-box" id="searchBox" placeholder="搜索动态内容...">
+                    <button class="clear-search" id="clearSearch" title="清空搜索">✕</button>
+                </div>
+                
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="main-content">
+        <!-- 使用说明 -->
+        <div class="instructions" id="instructions">
+            <div class="instruction-card">
+                <h3>📱 手机端使用说明</h3>
+                <ul>
+                    <li>iOS用户：通过Safari或Chrome浏览器打开本页面</li>
+                    <li>Android用户：通过Chrome或Edge浏览器打开本页面</li>
+                    <li>确保手机存储中有可话导出的ZIP文件</li>
+                    <li>点击下方按钮选择ZIP文件</li>
+                    <li>系统自动解析并展示您的动态</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 文件上传区域 -->
+        <div class="upload-container" id="uploadContainer">
+            <div class="upload-box" id="uploadBox">
+                <div class="upload-icon">📦</div>
+                <h3>上传动态ZIP文件</h3>
+                <p class="upload-instruction">
+                    支持格式：可话导出的 <code>可话-个人动态-{用户名}.zip</code> 文件
+                </p>
+                <button class="upload-btn" onclick="document.getElementById('zipFile').click()">
+                    选择ZIP文件
+                </button>
+                <input type="file" id="zipFile" class="file-input" accept=".zip">
+                <div id="fileInfo" class="file-info"></div>
+            </div>
+            <div id="errorMessage" class="error-message"></div>
+        </div>
+
+        <!-- 主内容区域 -->
+        <div class="timeline-container">
+            <div id="stats" class="stats"></div>
+            
+            <div id="loading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>正在加载动态内容...</p>
+            </div>
+            
+            <div id="timeline" class="timeline">
+                <!-- 动态条目将通过JavaScript动态生成 -->
+            </div>
+        </div>
+    </div>
+    
+    <!-- 返回顶部按钮 -->
+    <button class="back-to-top" id="backToTop" title="返回顶部">↑</button>
+    
+    <!-- 灯箱 -->
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="lightboxClose">&times;</button>
+            <img id="lightboxImage" src="" alt="放大图片">
+        </div>
+    </div>
+
+    <script>
+        // 动态应用主类
+        class DiaryApp {
+            constructor() {
+                this.entries = [];
+                this.currentYear = null;
+                this.availableYears = new Set();
+                this.filteredEntries = [];
+                this.searchTerm = "";
+                this.isLoading = false;
+                this.zipData = null;
+                this.mediaCache = new Map();
+                this.baseDir = "";
+                this.sortOrder = "desc";
+                this.isControlPanelFixed = false;
+                this.init();
+            }
+
+            // 初始化应用
+            init() {
+                this.setupEventListeners();
+                this.setupBackToTop();
+                this.adjustMainContentPadding();
+                this.showWelcomeMessage();
+            }
+
+            // 显示欢迎信息
+            showWelcomeMessage() {
+                const timeline = document.getElementById('timeline');
+                timeline.innerHTML = `
+                    <div class="initial-placeholder">
+                        <div class="upload-icon" style="font-size: 3rem; margin-bottom: 1rem;">📔</div>
+                        <p>请在手机存储中找到可话导出的ZIP文件</p>
+                        <p>点击"选择ZIP文件"按钮开始浏览您的动态</p>
+                    </div>
+                `;
+            }
+
+            // 调整主内容区域的内边距
+            adjustMainContentPadding() {
+                const stickyHeader = document.getElementById('stickyHeader');
+                const mainContent = document.querySelector('.main-content');
+                
+                if (stickyHeader && mainContent) {
+                    const headerHeight = stickyHeader.offsetHeight;
+                    mainContent.style.paddingTop = `${headerHeight + 20}px`;
                 }
-              });
             }
-            if (!reg.active && (reg.installing || reg.waiting)) {
-              // No active web worker and we have installed or are installing
-              // one for the first time. Simply wait for it to activate.
-              waitForActivation(reg.installing ?? reg.waiting);
-            } else if (!reg.active.scriptURL.endsWith(serviceWorkerVersion)) {
-              // When the app updates the serviceWorkerVersion changes, so we
-              // need to ask the service worker to update.
-              console.log('New service worker available.');
-              reg.update();
-              waitForActivation(reg.installing);
-            } else {
-              // Existing service worker is still good.
-              console.log('Loading app from service worker.');
-              loadMainDartJs();
-            }
-          });
 
-        // If service worker doesn't succeed in a reasonable amount of time,
-        // fallback to plaint <script> tag.
-        setTimeout(() => {
-          if (!scriptLoaded) {
-            console.warn(
-              'Failed to load app from service worker. Falling back to plain <script> tag.',
-            );
-            loadMainDartJs();
-          }
-        }, 4000);
-      });
-    } else {
-      // Service workers not supported. Just drop the <script> tag.
-      loadMainDartJs();
-    }
-  </script>
+            // 设置事件监听器
+            setupEventListeners() {
+                // 文件上传
+                const zipFileInput = document.getElementById('zipFile');
+                zipFileInput.addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        this.handleZipUpload(file);
+                    }
+                });
+                
+                // 拖放上传
+                const uploadBox = document.getElementById('uploadBox');
+                uploadBox.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadBox.classList.add('active');
+                });
+                
+                uploadBox.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    uploadBox.classList.remove('active');
+                });
+                
+                uploadBox.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadBox.classList.remove('active');
+                    
+                    const file = e.dataTransfer.files[0];
+                    if (file && file.name.endsWith('.zip')) {
+                        document.getElementById('zipFile').files = e.dataTransfer.files;
+                        this.handleZipUpload(file);
+                    } else {
+                        this.showError('请上传ZIP格式的文件');
+                    }
+                });
+
+                // 搜索功能
+                document.getElementById('searchBox').addEventListener('input', (e) => {
+                    this.searchTerm = e.target.value.toLowerCase().trim();
+                    this.filterEntries();
+                });
+                
+                // 清空搜索
+                document.getElementById('clearSearch').addEventListener('click', () => {
+                    document.getElementById('searchBox').value = '';
+                    this.searchTerm = '';
+                    this.filterEntries();
+                });
+                
+                // 排序功能
+                document.getElementById('sortDesc').addEventListener('click', () => {
+                    this.setSortOrder('desc');
+                });
+                
+                document.getElementById('sortAsc').addEventListener('click', () => {
+                    this.setSortOrder('asc');
+                });
+                
+                // 灯箱关闭
+                document.getElementById('lightboxClose').addEventListener('click', () => {
+                    this.closeLightbox();
+                });
+                
+                // 点击背景关闭灯箱
+                document.getElementById('lightbox').addEventListener('click', (e) => {
+                    if (e.target === e.currentTarget) {
+                        this.closeLightbox();
+                    }
+                });
+                
+                // ESC键关闭灯箱
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') {
+                        this.closeLightbox();
+                    }
+                });
+                
+                // 窗口大小变化时调整布局
+                window.addEventListener('resize', () => {
+                    this.adjustMainContentPadding();
+                });
+                
+                // 触摸事件优化
+                this.setupTouchEvents();
+            }
+
+            // 设置触摸事件
+            setupTouchEvents() {
+                // 防止双击缩放
+                let lastTouchEnd = 0;
+                document.addEventListener('touchend', (e) => {
+                    const now = Date.now();
+                    if (now - lastTouchEnd <= 300) {
+                        e.preventDefault();
+                    }
+                    lastTouchEnd = now;
+                }, false);
+                
+                // 防止长按菜单
+                document.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                });
+            }
+
+            // 设置返回顶部按钮
+            setupBackToTop() {
+                const backToTopBtn = document.getElementById('backToTop');
+                
+                // 滚动时显示/隐藏按钮
+                window.addEventListener('scroll', () => {
+                    if (window.scrollY > 300) {
+                        backToTopBtn.classList.add('visible');
+                    } else {
+                        backToTopBtn.classList.remove('visible');
+                    }
+                });
+                
+                // 点击返回顶部
+                backToTopBtn.addEventListener('click', () => {
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                });
+                
+                // 触摸优化
+                backToTopBtn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    backToTopBtn.style.transform = 'scale(0.9)';
+                });
+                
+                backToTopBtn.addEventListener('touchend', (e) => {
+                    e.preventDefault();
+                    backToTopBtn.style.transform = '';
+                    window.scrollTo({
+                        top: 0,
+                        behavior: 'smooth'
+                    });
+                });
+            }
+
+            // 处理ZIP文件上传
+            async handleZipUpload(file) {
+                this.showLoading(true);
+                this.clearError();
+                this.updateFileInfo(file.name, file.size);
+                
+                try {
+                    // 使用JSZip解压文件
+                    this.zipData = await JSZip.loadAsync(file);
+                    
+                    // 分析ZIP文件结构
+                    this.analyzeZipStructure();
+                    
+                    if (this.availableYears.size === 0) {
+                        this.showError('未找到有效的动态数据。请确保ZIP文件包含正确的目录结构。');
+                        return;
+                    }
+                    
+                    // 隐藏使用说明和上传区域
+                    document.getElementById('instructions').style.display = 'none';
+                    document.getElementById('uploadContainer').style.display = 'none';
+                    
+                    // 显示控制面板
+                    document.getElementById('controlPanel').style.display = 'flex';
+                    
+                    // 重新计算主内容内边距
+                    this.adjustMainContentPadding();
+                    
+                    // 渲染年份选择器
+                    this.renderYearSelector();
+                    
+                    // 默认加载最新的年份
+                    const years = Array.from(this.availableYears).sort((a, b) => b - a);
+                    const firstYear = years[0];
+                    this.loadYearData(firstYear);
+                    
+                } catch (error) {
+                    console.error('处理ZIP文件失败:', error);
+                    this.showError('处理ZIP文件失败：' + error.message);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            // 分析ZIP文件结构
+            analyzeZipStructure() {
+                this.availableYears.clear();
+                this.baseDir = "";
+                
+                const filenames = Object.keys(this.zipData.files);
+                
+                if (filenames.length === 0) {
+                    return;
+                }
+                
+                // 查找基础目录
+                for (const filename of filenames) {
+                    if (!filename.includes('/')) continue;
+                    
+                    const firstSlashIndex = filename.indexOf('/');
+                    const firstDir = filename.substring(0, firstSlashIndex + 1);
+                    
+                    if (firstDir.startsWith('可话-个人动态-')) {
+                        this.baseDir = firstDir;
+                        console.log(`找到基础目录: ${this.baseDir}`);
+                        break;
+                    }
+                }
+                
+                // 如果没有找到标准格式，使用第一个目录
+                if (!this.baseDir && filenames[0].includes('/')) {
+                    const firstSlashIndex = filenames[0].indexOf('/');
+                    this.baseDir = filenames[0].substring(0, firstSlashIndex + 1);
+                }
+                
+                // 查找年份文件夹
+                for (const filename of filenames) {
+                    if (!filename.startsWith(this.baseDir)) continue;
+
+                    if (!filename.includes('我的动态')) continue;
+                    
+                    const relativePath = filename.substring(this.baseDir.length + 5);
+                    const yearMatch = relativePath.match(/^(\d{4})年\//);
+                    if (yearMatch) {
+                        this.availableYears.add(yearMatch[1]);
+                    }
+                }
+                
+                console.log(`找到 ${this.availableYears.size} 个年份:`, Array.from(this.availableYears));
+            }
+
+            // 加载指定年份的数据
+            async loadYearData(year) {
+                this.currentYear = year;
+                this.showLoading(true);
+                
+                try {
+                    // 尝试多种可能的文件路径
+                    const possiblePaths = [
+                        `${this.baseDir}我的动态/${year}年/${year}年-动态内容.txt`,
+                        `${this.baseDir}${year}年/${year}年-动态内容.txt`,
+                        `${year}年/${year}年-动态内容.txt`,
+                        `${year}年-动态内容.txt`
+                    ];
+                    
+                    let textContent = null;
+                    let usedPath = null;
+                    
+                    for (const path of possiblePaths) {
+                        if (this.zipData.files[path]) {
+                            textContent = await this.zipData.files[path].async('text');
+                            usedPath = path;
+                            break;
+                        }
+                    }
+                    
+                    if (!textContent) {
+                        this.showError(`未找到 ${year} 年的动态文本文件`);
+                        this.clearEntries();
+                        return;
+                    }
+                    
+                    this.parseDiaryText(textContent, year);
+                    this.applySortOrder();
+                    this.renderTimeline();
+                    
+                } catch (error) {
+                    console.error(`加载 ${year} 年数据失败:`, error);
+                    this.showError(`加载 ${year} 年数据失败：${error.message}`);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            // 清理内容
+            cleanContent(content) {
+                return content
+                    .replace(/\[图片：[^\]]+\]/g, '')
+                    .replace(/\[视频：[^\]]+\]/g, '')
+                    .trim();
+            }
+
+            // 解析动态文本
+            parseDiaryText(diaryText, year) {
+                this.entries = [];
+                this.filteredEntries = [];
+                this.mediaCache.clear();
+                
+                if (!diaryText || diaryText.trim() === '') {
+                    return;
+                }
+                
+                const entryRegex = /(\d{4}年\d{1,2}月\d{1,2}日\s+\d{2}:\d{2}:\d{2})/g;
+                const parts = diaryText.split(entryRegex);
+                
+                for (let i = 1; i < parts.length; i += 2) {
+                    const dateTime = parts[i];
+                    const content = parts[i + 1] ? parts[i + 1].trim() : '';
+                    
+                    const dateTimeMatch = dateTime.match(/(\d{4})年(\d{1,2})月(\d{1,2})日\s+(\d{2}:\d{2}:\d{2})/);
+                    if (!dateTimeMatch) continue;
+                    
+                    const [, entryYear, month, day, time] = dateTimeMatch;
+                    
+                    this.entries.push({
+                        dateTime: dateTime,
+                        year: entryYear,
+                        month: parseInt(month).toString(),
+                        day: parseInt(day).toString(),
+                        time: time,
+                        content: content,
+                        cleanContent: this.cleanContent(content),
+                        images: this.extractImages(content),
+                        timestamp: new Date(`${entryYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${time}`).getTime(),
+                        displayDate: `${entryYear}/${month.padStart(2, '0')}/${day.padStart(2, '0')} ${time}`
+                    });
+                }
+                
+                this.entries.sort((a, b) => b.timestamp - a.timestamp);
+                this.filteredEntries = [...this.entries];
+                
+                this.updateStats();
+                this.updateYearButtons();
+                this.updateSortButtons();
+            }
+
+            // 提取图片标签
+            extractImages(content) {
+                const imageRegex = /\[图片：([^\]]+\.(png|jpg|jpeg|gif|webp|bmp))\]/g;
+                const videoRegex = /\[视频：([^\]]+\.(mp4|mov|avi|mkv|wmv))\]/g;
+                const mediaItems = [];
+                let match;
+                
+                while ((match = imageRegex.exec(content)) !== null) {
+                    mediaItems.push({
+                        filename: match[1],
+                        type: 'image',
+                        displayName: match[1]
+                    });
+                }
+                
+                while ((match = videoRegex.exec(content)) !== null) {
+                    mediaItems.push({
+                        filename: match[1],
+                        type: 'video',
+                        displayName: match[1]
+                    });
+                }
+                
+                return mediaItems;
+            }
+
+            // 渲染年份选择器
+            renderYearSelector() {
+                const yearSelector = document.getElementById('yearSelector');
+                yearSelector.innerHTML = '';
+                
+                const sortedYears = Array.from(this.availableYears).sort((a, b) => b - a);
+                
+                if (sortedYears.length === 0) {
+                    yearSelector.innerHTML = '<span style="color: var(--text-light);">请先选择动态文件</span>';
+                    return;
+                }
+                
+                sortedYears.forEach(year => {
+                    const button = document.createElement('button');
+                    button.className = `year-btn ${year === this.currentYear ? 'active' : ''}`;
+                    button.textContent = `${year}年`;
+                    button.dataset.year = year;
+                    
+                    // 触摸优化
+                    button.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        button.style.transform = 'scale(0.95)';
+                    });
+                    
+                    button.addEventListener('touchend', (e) => {
+                        e.preventDefault();
+                        button.style.transform = '';
+                    });
+                    
+                    yearSelector.appendChild(button);
+                });
+                
+                yearSelector.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('year-btn')) {
+                        const year = e.target.dataset.year;
+                        if (year !== this.currentYear) {
+                            this.loadYearData(year);
+                        }
+                    }
+                });
+            }
+
+            // 设置排序顺序
+            setSortOrder(order) {
+                if (this.sortOrder === order) return;
+                
+                this.sortOrder = order;
+                this.applySortOrder();
+                this.renderTimeline();
+                this.updateSortButtons();
+            }
+
+            // 应用排序顺序
+            applySortOrder() {
+                if (this.sortOrder === 'desc') {
+                    this.entries.sort((a, b) => b.timestamp - a.timestamp);
+                } else {
+                    this.entries.sort((a, b) => a.timestamp - b.timestamp);
+                }
+                
+                this.filterEntries();
+            }
+
+            // 更新排序按钮状态
+            updateSortButtons() {
+                const sortDescBtn = document.getElementById('sortDesc');
+                const sortAscBtn = document.getElementById('sortAsc');
+                
+                sortDescBtn.classList.toggle('active', this.sortOrder === 'desc');
+                sortAscBtn.classList.toggle('active', this.sortOrder === 'asc');
+            }
+
+            // 渲染时间线
+            renderTimeline() {
+                const timeline = document.getElementById('timeline');
+                timeline.innerHTML = '';
+                
+                if (this.filteredEntries.length === 0) {
+                    this.showNoEntries();
+                    return;
+                }
+                
+                this.renderEntriesAsync();
+            }
+
+            // 异步渲染动态条目
+            async renderEntriesAsync() {
+                const timeline = document.getElementById('timeline');
+                
+                for (const entry of this.filteredEntries) {
+                    const entryElement = await this.createEntryElement(entry);
+                    timeline.appendChild(entryElement);
+                }
+            }
+
+            // 创建动态条目元素
+            async createEntryElement(entry) {
+                const entryDiv = document.createElement('article');
+                entryDiv.className = 'diary-entry';
+                entryDiv.dataset.timestamp = entry.timestamp;
+                
+                const mediaHTML = await this.createMediaGallery(entry.images, entry.year, entry.month);
+                
+                entryDiv.innerHTML = `
+                    <div class="diary-content">
+                        <div class="diary-time">${entry.dateTime}</div>
+                        <div class="diary-text">${entry.cleanContent}</div>
+                        ${mediaHTML}
+                    </div>
+                `;
+                
+                entryDiv.querySelectorAll('.media-item').forEach(item => {
+                    if (item.tagName === 'IMG') {
+                        item.addEventListener('click', () => this.openLightbox(item.src));
+                    }
+                });
+                
+                return entryDiv;
+            }
+
+
+            // 创建媒体画廊
+            async createMediaGallery(mediaItems, year, month) {
+                if (mediaItems.length === 0) return '';
+                
+                const mediaElements = [];
+                
+                for (const media of mediaItems) {
+                    try {
+                        const monthDir = this.getMonthName(parseInt(month));
+                        const possiblePaths = [
+                            `${this.baseDir}我的动态/${year}年/图片&视频/${monthDir}/${media.filename}`,
+                            `${this.baseDir}${year}年/图片&视频/${monthDir}/${media.filename}`,
+                            `${year}年/图片&视频/${monthDir}/${media.filename}`,
+                            `${year}年/${monthDir}/${media.filename}`,
+                            `${monthDir}/${media.filename}`,
+                            media.filename
+                        ];
+                        
+                        let mediaUrl = null;
+                        let foundPath = null;
+                        
+                        for (const path of possiblePaths) {
+                            if (this.mediaCache.has(path)) {
+                                mediaUrl = this.mediaCache.get(path);
+                                foundPath = path;
+                                break;
+                            }
+                            
+                            if (this.zipData.files[path]) {
+                                const blob = await this.zipData.files[path].async('blob');
+                                mediaUrl = URL.createObjectURL(blob);
+                                this.mediaCache.set(path, mediaUrl);
+                                foundPath = path;
+                                break;
+                            }
+                        }
+                        
+                        if (!mediaUrl) {
+                            continue;
+                        }
+                        
+                        if (media.type === 'video') {
+                            mediaElements.push(`
+                                <div class="media-item-container">
+                                    <video controls class="media-item" playsinline>
+                                        <source src="${mediaUrl}" type="video/mp4">
+                                        您的浏览器不支持视频标签。
+                                    </video>
+                                </div>
+                            `);
+                        } else {
+                            mediaElements.push(`<img src="${mediaUrl}" alt="动态图片" class="media-item" loading="lazy">`);
+                        }
+                    } catch (error) {
+                        console.error(`加载媒体文件失败: ${media.filename}`, error);
+                    }
+                }
+                
+                if (mediaElements.length === 0) return '';
+                
+                return `
+                    <div class="media-container">
+                        <div class="media-label">📷 (${mediaElements.length})</div>
+                        <div class="media-grid">${mediaElements.join('')}</div>
+                    </div>
+                `;
+            }
+
+            // 获取月份名称
+            getMonthName(month) {
+                const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', 
+                                   '7月', '8月', '9月', '10月', '11月', '12月'];
+                return monthNames[month - 1] || `${month}月`;
+            }
+
+            // 日期格式化
+            formatDate(dateTime) {
+                return dateTime
+                    .replace('年', '/')
+                    .replace('月', '/')
+                    .replace('日', '');
+            }
+
+            // 更新年份按钮状态
+            updateYearButtons() {
+                document.querySelectorAll('.year-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.year === this.currentYear);
+                });
+            }
+
+            // 显示无条目消息
+            showNoEntries() {
+                const timeline = document.getElementById('timeline');
+                timeline.innerHTML = `
+                    <div class="no-entries">
+                        <h3>📭 暂无动态内容</h3>
+                        <p>当前年份还没有动态记录，或者搜索条件无匹配结果。</p>
+                    </div>
+                `;
+            }
+
+            // 清空所有条目
+            clearEntries() {
+                this.entries = [];
+                this.filteredEntries = [];
+                this.renderTimeline();
+            }
+
+            // 显示错误信息
+            showError(message) {
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.textContent = message;
+                errorDiv.style.display = 'block';
+            }
+
+            // 清空错误信息
+            clearError() {
+                const errorDiv = document.getElementById('errorMessage');
+                errorDiv.textContent = '';
+                errorDiv.style.display = 'none';
+            }
+
+            // 更新文件信息
+            updateFileInfo(filename, size) {
+                const fileInfo = document.getElementById('fileInfo');
+                const sizeMB = (size / (1024 * 1024)).toFixed(2);
+                fileInfo.innerHTML = `<strong>已选择:</strong> ${filename} (${sizeMB} MB)`;
+            }
+
+            // 显示/隐藏加载指示器
+            showLoading(show) {
+                const loading = document.getElementById('loading');
+                const timeline = document.getElementById('timeline');
+                
+                if (show) {
+                    loading.style.display = 'block';
+                    timeline.style.opacity = '0.5';
+                } else {
+                    loading.style.display = 'none';
+                    timeline.style.opacity = '1';
+                }
+            }
+
+            // 过滤条目
+            filterEntries() {
+                if (!this.searchTerm) {
+                    this.filteredEntries = [...this.entries];
+                } else {
+                    this.filteredEntries = this.entries.filter(entry => 
+                        entry.cleanContent.toLowerCase().includes(this.searchTerm) 
+                    );
+                }
+                this.renderTimeline();
+                
+                this.updateStats();
+            }
+
+            // 更新统计数据
+            updateStats() {
+                const statsDiv = document.getElementById('stats');
+                const total = this.entries.length;
+                const filtered = this.filteredEntries.length;
+                const searchInfo = this.searchTerm ? `，搜索到 ${filtered} 条` : '';
+                // const sortInfo = this.sortOrder === 'desc' ? '（从新到旧）' : '（从旧到新）';
+                
+                statsDiv.innerHTML = `📊 ${this.currentYear}年 共 ${total} 篇动态${searchInfo}`;
+            }
+
+            // 打开图片灯箱
+            openLightbox(imageSrc) {
+                const lightbox = document.getElementById('lightbox');
+                const lightboxImage = document.getElementById('lightboxImage');
+                
+                lightboxImage.src = imageSrc;
+                lightboxImage.alt = '动态图片';
+                lightbox.classList.add('active');
+                
+                document.body.style.overflow = 'hidden';
+            }
+
+            // 关闭图片灯箱
+            closeLightbox() {
+                const lightbox = document.getElementById('lightbox');
+                lightbox.classList.remove('active');
+                
+                document.body.style.overflow = '';
+            }
+        }
+
+        // 页面加载完成后初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            window.diaryApp = new DiaryApp();
+        });
+    </script>
 </body>
 </html>
