@@ -1042,7 +1042,6 @@
                     
                     this.parseDiaryText(textContent, year);
                     this.applySortOrder();
-                    this.renderTimeline();
                     
                 } catch (error) {
                     console.error(`加载 ${year} 年数据失败:`, error);
@@ -1178,7 +1177,6 @@
                 
                 this.sortOrder = order;
                 this.applySortOrder();
-                this.renderTimeline();
                 this.updateSortButtons();
             }
 
@@ -1414,7 +1412,6 @@
                 const total = this.entries.length;
                 const filtered = this.filteredEntries.length;
                 const searchInfo = this.searchTerm ? `，搜索到 ${filtered} 条` : '';
-                // const sortInfo = this.sortOrder === 'desc' ? '（从新到旧）' : '（从旧到新）';
                 
                 statsDiv.innerHTML = `📊 ${this.currentYear}年 共 ${total} 篇动态${searchInfo}`;
             }
