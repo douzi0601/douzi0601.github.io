@@ -238,15 +238,43 @@
             touch-action: manipulation;
         }
 
-        /* 增加点击区域 */
-        .year-btn::after {
+        /* 加载状态的年份按钮 */
+        .year-btn.loading {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .year-btn.loading::after {
             content: '';
             position: absolute;
-            top: -8px;
-            right: -8px;
-            bottom: -8px;
-            left: -8px;
-            z-index: -1;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--primary-color);
+            border-radius: 20px;
+            opacity: 0.1;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .year-btn.loading .btn-text {
+            opacity: 0.7;
+        }
+
+        /* 加载动画效果 */
+        .year-btn.loading::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid transparent;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            z-index: 2;
         }
 
         .year-btn:active {
@@ -323,6 +351,45 @@
             flex: 1;
             justify-content: center;
             min-height: 40px; /* 确保按钮有最小高度 */
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 加载状态的排序按钮 */
+        .sort-btn.loading {
+            position: relative;
+        }
+
+        .sort-btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--primary-color);
+            border-radius: 20px;
+            opacity: 0.1;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .sort-btn.loading .btn-text {
+            opacity: 0.7;
+        }
+
+        .sort-btn.loading::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid transparent;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            z-index: 2;
         }
 
         .sort-btn:active {
@@ -348,6 +415,7 @@
             max-width: 900px;
             margin: 0 auto;
             padding: 0 1rem;
+            position: relative;
         }
 
         /* 加载指示器 */
@@ -368,8 +436,58 @@
             margin-bottom: 1rem;
         }
 
+        /* 时间线加载遮罩 */
+        .timeline-loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+        }
+
+        .timeline-loading.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .timeline-loading .spinner {
+            width: 50px;
+            height: 50px;
+            border-width: 4px;
+            margin-bottom: 1.5rem;
+        }
+
+        .timeline-loading p {
+            font-size: 1rem;
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        /* 加载动画 */
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.1; }
+            50% { opacity: 0.2; }
+            100% { opacity: 0.1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* 时间线 */
@@ -402,6 +520,7 @@
             transition: all 0.3s ease;
             overflow: hidden;
             border-left: 4px solid var(--primary-color);
+            animation: fadeIn 0.5s ease-out;
         }
 
         .diary-entry:active {
@@ -737,6 +856,12 @@
                 <div class="spinner"></div>
                 <p>正在加载动态内容...</p>
             </div>
+
+            <!-- 时间线加载遮罩 -->
+            <div class="timeline-loading" id="timelineLoading">
+                <div class="spinner"></div>
+                <p id="loadingText">正在加载...</p>
+            </div>
             
             <div id="timeline" class="timeline">
                 <!-- 动态条目将通过JavaScript动态生成 -->
@@ -770,6 +895,8 @@
                 this.baseDir = "";
                 this.sortOrder = "desc";
                 this.isControlPanelFixed = false;
+                this.isChangingYear = false;
+                this.isChangingSort = false;
                 this.init();
             }
 
@@ -1038,8 +1165,14 @@
 
             // 加载指定年份的数据
             async loadYearData(year) {
+                // 如果正在加载，防止重复点击
+                if (this.isLoading) return;
+                
                 this.currentYear = year;
-                this.showLoading(true);
+                this.isLoading = true;
+                
+                // 显示时间线加载动画
+                this.showTimelineLoading(`正在加载 ${year} 年动态...`);
                 
                 try {
                     // 尝试多种可能的文件路径
@@ -1074,7 +1207,8 @@
                     console.error(`加载 ${year} 年数据失败:`, error);
                     this.showError(`加载 ${year} 年数据失败：${error.message}`);
                 } finally {
-                    this.showLoading(false);
+                    this.isLoading = false;
+                    this.hideTimelineLoading();
                 }
             }
 
@@ -1171,7 +1305,7 @@
                 sortedYears.forEach(year => {
                     const button = document.createElement('button');
                     button.className = `year-btn ${year === this.currentYear ? 'active' : ''}`;
-                    button.textContent = `${year}年`;
+                    button.innerHTML = `<span class="btn-text">${year}年</span>`;
                     button.dataset.year = year;
                     
                     // 移除单独的触摸事件，改用统一的点击事件
@@ -1182,9 +1316,11 @@
                 // 优化点击事件委托
                 yearSelector.addEventListener('click', (e) => {
                     const yearBtn = e.target.closest('.year-btn');
-                    if (yearBtn) {
+                    if (yearBtn && !this.isLoading) {
                         const year = yearBtn.dataset.year;
                         if (year !== this.currentYear) {
+                            // 显示年份按钮的加载状态
+                            this.showYearButtonLoading(yearBtn);
                             this.loadYearData(year);
                         }
                     }
@@ -1206,13 +1342,84 @@
                 }, { passive: true });
             }
 
+            // 显示年份按钮的加载状态
+            showYearButtonLoading(button) {
+                // 移除所有年份按钮的加载状态
+                document.querySelectorAll('.year-btn').forEach(btn => {
+                    btn.classList.remove('loading');
+                });
+                
+                // 为当前点击的按钮添加加载状态
+                button.classList.add('loading');
+                
+                // 2秒后自动移除加载状态（防止卡住）
+                setTimeout(() => {
+                    button.classList.remove('loading');
+                }, 2000);
+            }
+
+            // 显示排序按钮的加载状态
+            showSortButtonLoading() {
+                const sortDescBtn = document.getElementById('sortDesc');
+                const sortAscBtn = document.getElementById('sortAsc');
+                
+                // 根据当前排序方向显示对应按钮的加载状态
+                if (this.sortOrder === 'desc') {
+                    sortDescBtn.classList.add('loading');
+                } else {
+                    sortAscBtn.classList.add('loading');
+                }
+                
+                // 2秒后自动移除加载状态
+                setTimeout(() => {
+                    sortDescBtn.classList.remove('loading');
+                    sortAscBtn.classList.remove('loading');
+                }, 2000);
+            }
+
+            // 显示时间线加载动画
+            showTimelineLoading(text = '正在加载...') {
+                const timelineLoading = document.getElementById('timelineLoading');
+                const loadingText = document.getElementById('loadingText');
+                
+                if (timelineLoading && loadingText) {
+                    loadingText.textContent = text;
+                    timelineLoading.classList.add('active');
+                }
+            }
+
+            // 隐藏时间线加载动画
+            hideTimelineLoading() {
+                const timelineLoading = document.getElementById('timelineLoading');
+                if (timelineLoading) {
+                    timelineLoading.classList.remove('active');
+                }
+                
+                // 同时移除所有按钮的加载状态
+                document.querySelectorAll('.year-btn.loading, .sort-btn.loading').forEach(btn => {
+                    btn.classList.remove('loading');
+                });
+            }
+
             // 设置排序顺序
             setSortOrder(order) {
-                if (this.sortOrder === order) return;
+                if (this.sortOrder === order || this.isLoading) return;
                 
                 this.sortOrder = order;
-                this.applySortOrder();
-                this.updateSortButtons();
+                
+                // 显示排序按钮的加载状态
+                this.showSortButtonLoading();
+                
+                // 显示时间线加载动画
+                this.showTimelineLoading('正在重新排序...');
+                
+                // 短暂延迟后应用排序，让用户看到加载效果
+                setTimeout(() => {
+                    this.applySortOrder();
+                    this.renderTimeline();
+                    this.updateSortButtons();
+                    this.hideTimelineLoading();
+                }, 300);
             }
 
             // 应用排序顺序
@@ -1283,6 +1490,13 @@
                 return entryDiv;
             }
 
+            // 清理内容
+            cleanContent(content) {
+                return content
+                    .replace(/\[图片：[^\]]+\]/g, '')
+                    .replace(/\[视频：[^\]]+\]/g, '')
+                    .trim();
+            }
 
             // 创建媒体画廊
             async createMediaGallery(mediaItems, year, month) {
